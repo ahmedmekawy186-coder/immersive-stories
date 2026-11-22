@@ -62,15 +62,15 @@ th { color: #9fc0e8; font-weight: 400; width: 50%; }
 @media (max-height: 520px) { #subtitle { font-size: 15px; bottom: 6px; line-height: 1.5; } #controls { display: none; } .card p { font-size: 14px; line-height: 1.6; } }
 body:not(.ready) #go { opacity: .5; pointer-events: none; }
 </style>
-<script src="lib/12-aframe-v1.8.0.min.js?v=3"></script>
-<script src="js/config.js?v=3"></script>
-<script src="js/logger.js?v=3"></script>
-<script src="js/audio.js?v=3"></script>
-<script src="js/input.js?v=3"></script>
-<script src="js/ui.js?v=3"></script>
-<script src="js/classroom.js?v=3"></script>
-<script src="js/story.js?v=3"></script>
-<script src="js/main.js?v=3"></script>
+<script src="lib/12-aframe-v1.8.0.min.js?v=4"></script>
+<script src="js/config.js?v=4"></script>
+<script src="js/logger.js?v=4"></script>
+<script src="js/audio.js?v=4"></script>
+<script src="js/input.js?v=4"></script>
+<script src="js/ui.js?v=4"></script>
+<script src="js/classroom.js?v=4"></script>
+<script src="js/story.js?v=4"></script>
+<script src="js/main.js?v=4"></script>
 </head>
 <body>
 <a-scene cursor="rayOrigin: mouse" raycaster="objects: .interactable; far: 40" renderer="antialias: true; colorManagement: true" vr-mode-ui="enabled: true" loading-screen="enabled: false" background="color: #9ec9e8">
@@ -78,7 +78,7 @@ body:not(.ready) #go { opacity: .5; pointer-events: none; }
   <a-entity id="hemi" light="type: hemisphere; color: #ffffff; groundColor: #cdbfa5; intensity: 0.35"></a-entity>
   <a-entity id="sun" light="type: directional; intensity: 0.4; color: #fff3dc" position="6 4 0"></a-entity>
   <a-entity id="rig" position="3.9 0 4.6" wasd-controls="acceleration: 28; enabled: false" room-bounds>
-    <a-entity id="cam" camera="fov: 72" position="0 1.6 0" look-controls="enabled: false" audio-listener-sync></a-entity>
+    <a-entity id="cam" camera="fov: 72" position="0 1.6 0" look-controls="enabled: false; magicWindowTrackingEnabled: false; touchEnabled: false; pointerLockEnabled: false" audio-listener-sync></a-entity>
   </a-entity>
 </a-scene>
 
