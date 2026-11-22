@@ -57,16 +57,18 @@ const Classroom = (function () {
     E(head, 'a-sphere', { radius: 0.115, scale: '1 1.15 1', material: 'color:' + skin + '; roughness:0.8' });
     E(head, 'a-sphere', { radius: 0.12, position: '0 0.05 0.02', scale: '1.0 0.8 1.0', material: 'color:' + (o.hair || '#1c1612') });
     [-0.04, 0.04].forEach(x => E(head, 'a-sphere', { radius: 0.014, position: P([x, 0.02, -0.105]), material: 'color:#101010' }));
+    const mouth = box(head, [0, -0.058, -0.108], [0.034, 0.008, 0.01], '#5a1f1f');
+    const marker = E(head, 'a-cone', { position: '0 0.33 0', rotation: '180 0 0', 'radius-bottom': 0.055, 'radius-top': 0, height: 0.11, material: 'shader:flat; color:#ffd479', visible: 'false' });
     if (o.mustache) box(head, [0, -0.04, -0.108], [0.08, 0.018, 0.02], '#1c1612');
     if (o.glasses) { [-0.04, 0.04].forEach(x => E(head, 'a-torus', { radius: 0.025, 'radius-tubular': 0.003, position: P([x, 0.02, -0.112]), material: 'color:#222' })); }
     const arms = [-1, 1].map(s => {
       const piv = E(root, 'a-entity', { position: P([s * 0.26, hipY + 0.52, 0]) });
       E(piv, 'a-cylinder', { position: '0 -0.24 0', radius: 0.045, height: 0.5, material: 'color:' + (o.jacket || shirt) });
       E(piv, 'a-sphere', { position: '0 -0.5 0', radius: 0.05, material: 'color:' + skin });
-      if (o.seated) piv.object3D.rotation.x = -1.1;
+      if (o.seated) piv.object3D.rotation.x = 1.1;
       return piv;
     });
-    root.__parts = { arms, head, seated: !!o.seated };
+    root.__parts = { arms, head, mouth, marker, seated: !!o.seated }; root.__phase = Math.random() * 6;
     root.setAttribute('person-anim', 'mood:' + (o.mood || 'idle'));
     return root;
   }
@@ -218,10 +220,11 @@ const Classroom = (function () {
     }));
     // VR headsets on desks (reference art direction)
     [[-3.2, 0.2], [2.3, 1.8], [3.6, 0.2], [-2.0, 1.8]].forEach(p => { box(root, [p[0], 0.82, p[1] + 0.15], [0.2, 0.1, 0.12], '#f2f2f2'); box(root, [p[0], 0.82, p[1] + 0.2], [0.16, 0.07, 0.03], '#151515'); });
+    state.students = [];
     // seated students (placeholders)
     const sCols = ['#ffffff', '#c9d6e8', '#e8d6c9', '#d9e8c9'];
     [[-3.5, 1.8], [-2.1, 0.2], [2.1, 1.8], [3.5, 0.2], [-3.5, 0.2]].forEach((p, i) => {
-      person(root, { pos: [p[0], 0, p[1] + 0.72], rotY: 0, seated: true, shirt: sCols[i % 4], pants: '#2f3b52', hair: i % 2 ? '#2a1f18' : '#111', skin: i % 2 ? '#b98a64' : '#d1a47d' });
+      state.students.push(person(root, { pos: [p[0], 0, p[1] + 0.72], rotY: 0, seated: true, shirt: sCols[i % 4], pants: '#2f3b52', hair: i % 2 ? '#2a1f18' : '#111', skin: i % 2 ? '#b98a64' : '#d1a47d', mood: 'type' }));
     });
     // teacher desk + PC (interactive)
     box(root, [3.0, 0.38, -3.3], [1.7, 0.76, 0.75], '#a9784a');
@@ -252,8 +255,8 @@ const Classroom = (function () {
 
     // people
     state.people.teacher = person(root, { pos: POS.teacher, rotY: 180, shirt: '#cfd9e6', pants: '#33363d', tie: '#7a1f1f', mustache: true, skin: '#c99a74', mood: 'talk' });
-    state.people.supervisor = person(root, { pos: POS.supervisor, rotY: 180, seated: true, shirt: '#ffffff', jacket: '#4a4f57', pants: '#3c4048', tie: '#1d3557', glasses: true, hair: '#6e6e6e', skin: '#c19470', mood: 'idle' });
-    box(root, [4.2, 0.45, 4.25], [0.45, 0.05, 0.45], '#7b3b2a'); box(root, [4.2, 0.72, 4.45], [0.45, 0.5, 0.05], '#7b3b2a');
+    state.people.supervisor = person(root, { pos: POS.supervisor, rotY: 0, seated: true, shirt: '#ffffff', jacket: '#4a4f57', pants: '#3c4048', tie: '#1d3557', glasses: true, hair: '#6e6e6e', skin: '#c19470', mood: 'idle' });
+    box(root, [4.2, 0.45, 3.78], [0.45, 0.05, 0.45], '#7b3b2a'); box(root, [4.2, 0.72, 4.0], [0.45, 0.5, 0.05], '#7b3b2a'); box(root, [4.2, 0.22, 3.78], [0.05, 0.4, 0.05], '#555');
     box(root, [4.2, 0.9, 3.55], [0.3, 0.02, 0.22], '#e5d9b5');   // clipboard
     // hit boxes
     const hitStyle = 'opacity:0; transparent:true; depthWrite:false';
@@ -291,19 +294,44 @@ const Classroom = (function () {
     const p = state.people.teacher.object3D.position; const yaw = Math.atan2(x - p.x, z - p.z) * 180 / Math.PI + 180;
     state.people.teacher.setAttribute('rotation', '0 ' + yaw + ' 0');
   }
-  function setMood(who, mood) { state.people[who].setAttribute('person-anim', 'mood', mood); }
+  function setMood(who, mood) {
+    if (who === 'students') { state.students.forEach(s => s.setAttribute('person-anim', 'mood', mood)); return; }
+    state.people[who].setAttribute('person-anim', 'mood', mood);
+  }
+  /* who: teacher | supervisor | student. Mouth moves, head bobs, a small yellow marker floats over the speaker. */
+  function talk(who, on) {
+    const el = who === 'student' ? state.students[0] : state.people[who]; if (!el) return;
+    el.__speaking = !!on; const p = el.__parts; if (p) p.marker.setAttribute('visible', !!on);
+  }
+  function turn(who, yawDeg) { state.people[who].setAttribute('rotation', '0 ' + yawDeg + ' 0'); }
+  function worldPos(who) {
+    if (who === 'student') { const v = new THREE.Vector3(); state.students[0].object3D.getWorldPosition(v); return [v.x, 1.2, v.z]; }
+    const v = new THREE.Vector3(); state.people[who].object3D.getWorldPosition(v); return [v.x, v.y + 1.5, v.z];
+  }
 
   AFRAME.registerComponent('person-anim', {
     schema: { mood: { default: 'idle' } },
     tick(t) {
-      const p = this.el.__parts; if (!p) return; const m = this.data.mood; const s = t / 1000;
-      const [L, R] = p.arms; const base = p.seated ? -1.1 : 0;
-      if (m === 'idle') { L.object3D.rotation.x = base + Math.sin(s * 0.8) * 0.03; R.object3D.rotation.x = base + Math.sin(s * 0.8 + 1) * 0.03; p.head.object3D.rotation.y = Math.sin(s * 0.4) * 0.15; }
-      else if (m === 'talk') { L.object3D.rotation.x = -0.3 + Math.sin(s * 2.2) * 0.25; R.object3D.rotation.x = -0.6 + Math.sin(s * 2.6 + 1) * 0.35; p.head.object3D.rotation.y = Math.sin(s * 0.7) * 0.25; }
-      else if (m === 'anxious') { L.object3D.rotation.x = -1.0 + Math.sin(s * 9) * 0.18; R.object3D.rotation.x = -1.0 + Math.sin(s * 9 + 2) * 0.18; L.object3D.rotation.z = 0.35; R.object3D.rotation.z = -0.35; p.head.object3D.rotation.y = Math.sin(s * 3.5) * 0.4; }
-      else if (m === 'calm') { L.object3D.rotation.x = -0.15; R.object3D.rotation.x = -0.15; L.object3D.rotation.z = 0; R.object3D.rotation.z = 0; p.head.object3D.rotation.y = 0; }
+      const el = this.el, p = el.__parts; if (!p) return; const m = this.data.mood, s = t / 1000, ph = el.__phase || 0, sin = Math.sin;
+      const [L, R] = p.arms, sit = p.seated, base = sit ? 1.1 : 0.05;   // +x swings the arm FORWARD (-z)
+      const arm = (a, x, z) => { a.object3D.rotation.x = x; a.object3D.rotation.z = z || 0; };
+      let hx = 0, hy = 0;
+      switch (m) {
+        case 'type': arm(L, base + sin(s * 7 + ph) * 0.05); arm(R, base + sin(s * 8 + ph) * 0.05); hy = sin(s * 0.5 + ph) * 0.1; hx = 0.12; break;
+        case 'chat': arm(L, base + sin(s * 2 + ph) * 0.06); arm(R, base + sin(s * 2.4 + ph) * 0.06); hy = sin(s * 1.4 + ph) * 0.7; break;
+        case 'gasp': arm(L, 2.3 + sin(s * 6 + ph) * 0.05, 0.25); arm(R, 2.3 + sin(s * 6 + ph + 1) * 0.05, -0.25); hx = -0.18; break;
+        case 'talk': arm(L, 0.5 + sin(s * 2.2) * 0.3, 0.1); arm(R, 0.9 + sin(s * 2.6 + 1) * 0.4, -0.1); hy = sin(s * 0.7) * 0.25; break;
+        case 'point': arm(L, 0.1, 0.05); arm(R, 1.6 + sin(s * 1.5) * 0.04, -0.12); break;
+        case 'anxious': arm(L, 2.4 + sin(s * 9) * 0.15, 0.5); arm(R, 2.4 + sin(s * 9 + 2) * 0.15, -0.5); hy = sin(s * 3.5) * 0.4; hx = 0.05; break;
+        case 'calm': arm(L, 0.2, 0); arm(R, 0.2, 0); break;
+        case 'note': arm(L, base, 0); arm(R, 1.25 + sin(s * 6) * 0.06, 0); hx = 0.35; break;
+        case 'watch': arm(L, base, 0); arm(R, base, 0); hy = 0.7; hx = 0.03; break;
+        default: arm(L, base + sin(s * 0.8 + ph) * 0.03); arm(R, base + sin(s * 0.8 + ph + 1) * 0.03); hy = sin(s * 0.4 + ph) * 0.15;
+      }
+      if (el.__speaking) { p.mouth.object3D.scale.y = 1 + Math.abs(sin(s * 13)) * 3.2; hx += sin(s * 6) * 0.04; p.marker.object3D.position.y = 0.33 + sin(s * 6) * 0.025; } else p.mouth.object3D.scale.y = 1;
+      const h = p.head.object3D.rotation; h.x += (hx - h.x) * 0.12; h.y += (hy - h.y) * 0.12;
     }
   });
 
-  return { build, setPower, showCalibration, markTarget, setMood, faceTeacherTo, Board, state, POS, refreshRaycaster };
+  return { build, setPower, showCalibration, markTarget, setMood, talk, turn, worldPos, faceTeacherTo, Board, state, POS, refreshRaycaster };
 })();
