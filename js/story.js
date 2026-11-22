@@ -11,7 +11,7 @@ const Story = (function () {
   const rigEl = () => document.getElementById('rig');
   const rig = () => rigEl().object3D.position;
   const dist = p => Math.hypot(rig().x - p[0], rig().z - p[2]);
-  function go(s) { state = s; log('state_enter'); }
+  function go(s) { state = s; log('state_enter'); const st = document.getElementById('status'); if (st) st.textContent = (st.textContent.split(' | ')[0] || '') + ' | state: ' + s + ' | audio: ' + (AudioEngine.mode ? AudioEngine.mode() : ''); }
   function stepStart(name) { log('step_start', { step: name }); }
   function stepDone(name) { log('step_complete', { step: name }); }
   function walkEnabled(v) { rigEl().setAttribute('wasd-controls', 'enabled', v); }
@@ -58,10 +58,9 @@ const Story = (function () {
     Classroom.setMood('teacher', 'talk'); Classroom.setMood('supervisor', 'note'); Classroom.setMood('students', 'type');
     UI.cine('طوارئ السبورة', 'القصة الثانية  •  التدريب الميداني');
     await wait(2600);
-    await L('open1'); await L('open2');
-    UI.cineHide(); await wait(900);
-    // the camera walks you in from the door while the lesson goes on
-    glide([0.9, 3.0], [-1.0, -3.0], 6500);
+    UI.cineHide(); await wait(1200);                     // fade to the classroom: the narration plays over the scene
+    glide([0.9, 3.0], [-1.0, -3.0], 14000);            // the camera walks you in from the door
+    await L('open1'); await L('open2'); await wait(500);
     await lesson();
   }
   async function lesson() {
