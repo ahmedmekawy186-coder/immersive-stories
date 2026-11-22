@@ -26,14 +26,19 @@
     const go = document.getElementById('go'), sid = document.getElementById('sid'), err = document.getElementById('sid-err');
     go.addEventListener('click', () => {
       const v = sid.value.trim();
-      if (!/^[\w\u0600-\u06FF\- ]{1,40}$/.test(v)) { err.textContent = 'اكتب رقم الجلسة (حروف أو أرقام فقط).'; return; }
+      if (!v || v.length > 40) { err.textContent = 'اكتب رقم الجلسة (حتى 40 حرفًا).'; return; }
       Logger.start(v, CONFIG.level); AudioEngine.init();
-      UI.hide('intro'); UI.show('hud');
-      const rig = document.getElementById('rig'); rig.setAttribute('wasd-controls', 'enabled', true);
-      document.getElementById('cam').setAttribute('look-controls', 'enabled', true);
-      Story.begin();
+      go.disabled = true; go.textContent = 'جارٍ تحميل الأصوات…';
+      const voice = CONFIG.fast ? Promise.resolve(false) : AudioEngine.loadVoice(CONFIG.voiceUrl).catch(e => { console.warn('voice load failed', e); return false; });
+      voice.then(ok => {
+        UI.hide('intro'); UI.show('hud'); if (!ok && !CONFIG.fast) UI.voiceNotice();
+        document.getElementById('cam').setAttribute('look-controls', 'enabled', true);
+        Story.begin();
+      });
     });
     sid.addEventListener('keydown', e => { if (e.key === 'Enter') go.click(); });
+    document.getElementById('btn-skip').onclick = () => UI.skip();
+    let mutedNow = false; document.getElementById('btn-voice').onclick = () => { mutedNow = !mutedNow; UI.setMuted(mutedNow); };
     document.getElementById('dl-csv').onclick = () => Logger.exportCSV();
     document.getElementById('dl-json').onclick = () => Logger.exportJSON();
     document.getElementById('again').onclick = () => location.reload();
