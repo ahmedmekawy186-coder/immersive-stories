@@ -51,6 +51,7 @@ const AudioEngine = (function () {
     const ac = noiseSrc(), acf = ctx.createBiquadFilter(); acf.type = 'bandpass'; acf.frequency.value = 350; acf.Q.value = 0.7;
     S.acGain = gain(0.5); ac.connect(acf).connect(S.acGain).connect(panner(POS.ac, 1.5, 1));
 
+    if (false) { S.humGain = gain(0); S.humOsc = []; S.tubeGain = gain(0); S.fanGains = []; } else {
     // 3) Transformer / mains hum 50 Hz + harmonics (positional, outside the wall)
     S.humGain = gain(0.55); const humLP = ctx.createBiquadFilter(); humLP.type = 'lowpass'; humLP.frequency.value = 600;
     S.humOsc = [50, 100, 150, 250].map((f, i) => {
@@ -70,6 +71,8 @@ const AudioEngine = (function () {
       const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 4000;
       const g = gain(0.22); n.connect(hp).connect(lp).connect(g).connect(panner(p, 1.5, 1.2)); return g;
     });
+
+    }
 
     // 6) Students' murmur (positional, bursty)
     const mn = noiseSrc(), mbp = ctx.createBiquadFilter(); mbp.type = 'bandpass'; mbp.frequency.value = 700; mbp.Q.value = 1.5;
@@ -148,7 +151,7 @@ const AudioEngine = (function () {
     },
     resume() { try { if (ctx && ctx.state !== 'running') ctx.resume(); } catch (e) {} },
     mode: () => S.voiceMode || 'none',
-    hasVoice: () => !!((S.voiceBuf && ctx) || S.voiceEl),
+    hasVoice: () => !!((S.voiceBuf && ctx) || S.voiceEl || S.voiceMode === 'files'),
     playSprite(off, dur, p) {
       if (!S.voiceBuf && S.voiceEl) {
         return new Promise(res => { const el = S.voiceEl; el.volume = 1; try { el.currentTime = off; } catch (e) {} const pr = el.play(); if (pr && pr.catch) pr.catch(() => res()); S.stopEl = () => { el.pause(); res(); }; setTimeout(() => { el.pause(); res(); }, dur * 1000 + 100); });
@@ -160,6 +163,19 @@ const AudioEngine = (function () {
       });
     },
     stopVoice() { try { if (S.cur) S.cur.stop(); } catch (e) {} try { if (S.stopEl) S.stopEl(); } catch (e) {} },
+    /* mobile: one plain <audio> element, unlocked by the first tap, one small mp3 per line */
+    unlockEl() { const el = S.el || (S.el = new Audio()); el.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA='; const p = el.play(); if (p && p.catch) p.catch(() => {}); S.voiceMode = 'files'; },
+    preload(urls) { urls.reduce((pr, u) => pr.then(() => fetch(u).then(r => r.arrayBuffer()).catch(() => {})), Promise.resolve()); },
+    playFile(url) {
+      return new Promise(res => {
+        const el = S.el || (S.el = new Audio()); let d = false;
+        const f = () => { if (d) return; d = true; el.onended = null; el.onerror = null; res(); };
+        el.onended = f; el.onerror = () => { S.fileErr = 'audio error ' + url; f(); }; S.stopEl = () => { el.pause(); f(); };
+        el.src = url; el.volume = 1; const pr = el.play(); if (pr && pr.catch) pr.catch(e => { S.fileErr = String(e && e.message || e); f(); });
+        setTimeout(f, 30000);
+      });
+    },
+    fileErr: () => S.fileErr || '',
     isStarted: () => started
   };
   return api;
