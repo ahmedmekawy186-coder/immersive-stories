@@ -3,6 +3,10 @@
   const q = new URLSearchParams(location.search);
   const level = ['desktop', 'touch', 'vr'].includes(q.get('level')) ? q.get('level') : 'desktop';
   window.CONFIG = {
+    // phones (incl. "Desktop site" mode, which hides the Android UA): play per-line mp3 files through a plain <audio> element
+    mobile: q.get('files') === '1' || (q.get('files') !== '0' && (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 0 && Math.min(screen.width, screen.height) < 900))),
+    FILES: {"back1": "audio/1-back1.mp3?v=3", "back2": "audio/2-back2.mp3?v=3", "back3": "audio/3-back3.mp3?v=3", "c1": "audio/4-c1.mp3?v=3", "c1r": "audio/5-c1r.mp3?v=3", "c2": "audio/6-c2.mp3?v=3", "c2r": "audio/7-c2r.mp3?v=3", "c3": "audio/8-c3.mp3?v=3", "c3r": "audio/9-c3r.mp3?v=3", "calm1": "audio/10-calm1.mp3?v=3", "cut1": "audio/11-cut1.mp3?v=3", "cut2": "audio/12-cut2.mp3?v=3", "cw1": "audio/13-cw1.mp3?v=3", "cw2": "audio/14-cw2.mp3?v=3", "les1": "audio/15-les1.mp3?v=3", "les2": "audio/16-les2.mp3?v=3", "les3": "audio/17-les3.mp3?v=3", "open1": "audio/18-open1.mp3?v=3", "open2": "audio/19-open2.mp3?v=3", "p1": "audio/20-p1.mp3?v=3", "p1r": "audio/21-p1r.mp3?v=3", "p2": "audio/22-p2.mp3?v=3", "p2r": "audio/23-p2r.mp3?v=3", "p3": "audio/24-p3.mp3?v=3", "p3r": "audio/25-p3r.mp3?v=3", "res1": "audio/26-res1.mp3?v=3", "res2": "audio/27-res2.mp3?v=3", "res3": "audio/28-res3.mp3?v=3", "res4": "audio/29-res4.mp3?v=3", "set1": "audio/30-set1.mp3?v=3", "skipcheck": "audio/31-skipcheck.mp3?v=3", "w_board": "audio/32-w_board.mp3?v=3", "w_other": "audio/33-w_other.mp3?v=3"},
+    PRELOAD: ["audio/18-open1.mp3?v=3", "audio/19-open2.mp3?v=3", "audio/11-cut1.mp3?v=3"],
     level,                       // desktop (low) | touch (medium) | vr (high) -- only desktop is built in v1
     fast: q.get('fast') === '1', // test mode: skips speech/waits (used by automated tests only)
     lessonMs: 9000, outageMs: 3800,
