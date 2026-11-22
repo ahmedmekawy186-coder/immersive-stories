@@ -51,7 +51,7 @@
         setStatus(ok ? 'voice: ' + ok : 'voice: FAILED ' + (window.__voiceErr || ''));
         UI.hide('intro'); UI.show('hud'); if (!ok && !CONFIG.fast) UI.voiceNotice();
         document.getElementById('cam').setAttribute('look-controls', 'enabled', true);
-        Story.begin();
+        document.body.classList.add('playing'); Story.begin();
       });
     });
     sid.addEventListener('keydown', e => { if (e.key === 'Enter') go.click(); });
