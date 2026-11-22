@@ -34,6 +34,16 @@ const UI = (function () {
       const est = Math.min(15000, 1500 + text.length * 75) * (fast() ? 0.06 : 1);
       const t0 = performance.now(); let done = false, tm = null;
       const fin = () => { if (done) return; done = true; clearTimeout(tm); skipFn = null; res(); };
+      if (window.CONFIG && CONFIG.mobile && o.id && CONFIG.FILES && CONFIG.FILES[o.id] && !muted && !fast() && AudioEngine.hasVoice()) {
+        const dur = (CONFIG.VOICE[o.id] || [0, 4])[1] * 1000, ts = performance.now();
+        skipFn = () => { AudioEngine.stopVoice(); fin(); };
+        tm = setTimeout(fin, dur + 5000);
+        AudioEngine.playFile(CONFIG.FILES[o.id]).then(() => {
+          const e = AudioEngine.fileErr(); if (e) { const st = document.getElementById('status'); if (st && !/voice file/.test(st.textContent)) st.textContent += ' | voice file problem: ' + e; }
+          setTimeout(fin, Math.max(0, dur - (performance.now() - ts) - 100));
+        });
+        return;
+      }
       /* 1) recorded voices (Egyptian/Arabic neural TTS, pre-rendered, spatialised) */
       const vv = window.CONFIG && CONFIG.VOICE && o.id && CONFIG.VOICE[o.id];
       if (!muted && vv && !fast() && window.AudioEngine && AudioEngine.hasVoice()) {
