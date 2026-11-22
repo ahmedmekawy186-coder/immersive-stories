@@ -260,7 +260,7 @@ const Classroom = (function () {
       const g = E(root, 'a-entity', { id: 'cal-' + k, position: P([spots[k][0], spots[k][1], -4.37]), visible: 'false' });
       E(g, 'a-ring', { 'radius-inner': 0.05, 'radius-outer': 0.085, material: 'shader:flat; color:#7fe9ff; side:double' });
       box(g, [0, 0, 0], [0.2, 0.012, 0.005], '#7fe9ff'); box(g, [0, 0, 0], [0.012, 0.2, 0.005], '#7fe9ff');
-      const hit = E(g, 'a-circle', { radius: 0.17, position: '0 0 0.01', 'data-target': 'cal-' + k, 'data-label': 'نقطة معايرة', material: 'opacity:0; transparent:true; depthWrite:false' });
+      const hit = E(g, 'a-circle', { radius: 0.26, position: '0 0 0.02', 'data-target': 'cal-' + k, 'data-label': 'نقطة معايرة', material: 'opacity:0; transparent:true; depthWrite:false' });
       state.calTargets[k] = { group: g, hit: hit, spot: spots[k] };
     });
     const bhit = E(root, 'a-plane', { class: 'interactable', 'data-target': 'board', 'data-label': 'السبورة التفاعلية', position: '0 1.6 -4.36', width: 2.4, height: 1.35, material: 'opacity:0; transparent:true; depthWrite:false' });
