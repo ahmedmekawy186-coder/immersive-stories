@@ -47,6 +47,19 @@ table { width: 100%; border-collapse: collapse; margin-top: 10px; }
 th, td { padding: 6px 10px; border-bottom: 1px solid rgba(255,255,255,.15); text-align: right; font-size: 16px; }
 th { color: #9fc0e8; font-weight: 400; width: 50%; }
 .warn { color: #ffd479; font-size: 14px; }
+#cine { position: fixed; inset: 0; z-index: 30; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; opacity: 0; pointer-events: none; transition: opacity 1.4s; }
+#cine.show { opacity: 1; }
+#cine-title { font-size: clamp(34px, 7vw, 74px); font-weight: 700; color: #ffd479; letter-spacing: .02em; }
+#cine-sub { margin-top: 10px; font-size: clamp(16px, 2.6vw, 24px); color: #9fc0e8; }
+#flash { position: fixed; inset: 0; z-index: 25; background: #000; opacity: 0; pointer-events: none; }
+#flash.go { animation: flick .9s steps(1, end); }
+@keyframes flick { 0% { opacity: 0 } 15% { opacity: .95 } 30% { opacity: .1 } 45% { opacity: .9 } 60% { opacity: .3 } 100% { opacity: 0 } }
+#tools { position: absolute; top: 14px; left: 14px; display: flex; gap: 8px; pointer-events: auto; z-index: 3; }
+#tools button { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.35); background: rgba(10,22,44,.7); color: #fff; cursor: pointer; }
+.card { max-height: 92vh; overflow: auto; }
+#intro { overflow-y: auto; }
+@media (max-width: 700px) { #subtitle { font-size: 16px; bottom: 12px; padding: 8px 12px; } #objective { font-size: 14px; top: 52px; max-width: 80vw; } .card { padding: 18px 18px; } .card h1 { font-size: 22px; } .card p { font-size: 15px; } #controls { display: none; } }
+@media (max-height: 520px) { #subtitle { font-size: 15px; bottom: 6px; line-height: 1.5; } #controls { display: none; } .card p { font-size: 14px; line-height: 1.6; } }
 body:not(.ready) #go { opacity: .5; pointer-events: none; }
 </style>
 <script src="lib/12-aframe-v1.8.0.min.js"></script>
@@ -64,17 +77,20 @@ body:not(.ready) #go { opacity: .5; pointer-events: none; }
   <a-entity id="ambient" light="type: ambient; intensity: 0.45; color: #ffffff"></a-entity>
   <a-entity id="hemi" light="type: hemisphere; color: #ffffff; groundColor: #cdbfa5; intensity: 0.35"></a-entity>
   <a-entity id="sun" light="type: directional; intensity: 0.4; color: #fff3dc" position="6 4 0"></a-entity>
-  <a-entity id="rig" position="0 0 4.3" wasd-controls="acceleration: 28; enabled: false" room-bounds>
+  <a-entity id="rig" position="3.9 0 4.6" wasd-controls="acceleration: 28; enabled: false" room-bounds>
     <a-entity id="cam" camera="fov: 72" position="0 1.6 0" look-controls="enabled: false" audio-listener-sync></a-entity>
   </a-entity>
 </a-scene>
 
+<div id="cine"><div id="cine-title"></div><div id="cine-sub"></div></div>
+<div id="flash"></div>
 <div id="hud" class="panel">
+  <div id="tools"><button id="btn-skip">تخطي السطر ⏭ (مسافة)</button><button id="btn-voice">الصوت المنطوق: يعمل</button></div>
   <div id="objective"><small>المهمة</small><span id="obj-text"></span></div>
   <div id="hint"></div>
   <div id="subtitle"><div id="sub-speaker"></div><div id="sub-text"></div></div>
   <div id="choices"><div class="box"><div id="choices-prompt"></div><div id="choices-list"></div></div></div>
-  <div id="controls">حرّك بـ W A S D  •  اسحب بالفأرة لتدير رأسك  •  انقر للتفاعل  •  استخدم السماعات</div>
+  <div id="controls">اسحب بالفأرة لتدير رأسك  •  انقر على الشخص أو الشيء لتتحرك إليه  •  W A S D للمشي  •  مسافة لتخطي الحوار</div>
 </div>
 
 <div id="intro" class="panel show">
@@ -83,7 +99,7 @@ body:not(.ready) #go { opacity: .5; pointer-events: none; }
     <h1>طوارئ السبورة أثناء زيارة الموجه</h1>
     <h2>قصة رقمية غامرة: القصة الثانية (التدريب الميداني 2)</h2>
     <p>أنت أخصائي تكنولوجيا التعليم. تدخل الفصل الذكي بمعمل الحاسب أثناء حصة يحضرها الموجه التربوي، وفجأة ينقطع التيار الكهربائي. ما تفعله بعد ذلك يحدد إن كانت الحصة ستُنقذ.</p>
-    <p class="warn">ضع السماعات الآن: الصوت مكاني، وستسمع الأشياء من أماكنها في الفصل.</p>
+    <p class="warn">ضع السماعات الآن وارفع الصوت: القصة مسموعة بالصوت (راوٍ وشخصيات)، والأصوات مكانية. يلزم اتصال بالإنترنت أول مرة لتحميل ملف الصوت.</p>
     <label for="sid">رقم الجلسة (يُسجَّل مع كل خطوة تنفذها)</label>
     <input id="sid" autocomplete="off" placeholder="مثال: G1-007">
     <div id="sid-err"></div>
