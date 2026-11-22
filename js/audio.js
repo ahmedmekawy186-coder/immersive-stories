@@ -2,6 +2,7 @@
    كل الأصوات مولّدة برمجيًا (لا ملفات حقوق) / All sounds are synthesized: no licensed files. */
 const AudioEngine = (function () {
   let ctx = null, master, noiseBuf, started = false;
+  let amb = null; const AMB_LEVEL = 0.28, AMB_DUCK = 0.09;   // ambience sits well below speech and ducks while someone talks
   const S = {};            // named sources
   const POS = {            // world positions (meters), see classroom.js layout
     transformer: [6.5, 1.6, -1.5],   // outside the right wall
@@ -17,11 +18,11 @@ const AudioEngine = (function () {
     if (p.positionX) { p.positionX.value = x; p.positionY.value = y; p.positionZ.value = z; }
     else p.setPosition(x, y, z);
   }
-  function panner(p, ref, rolloff) {
+  function panner(p, ref, rolloff, bus) {
     const n = ctx.createPanner();
     n.panningModel = 'HRTF'; n.distanceModel = 'inverse';
     n.refDistance = ref || 1; n.rolloffFactor = rolloff || 1.3; n.maxDistance = 60;
-    pos(n, p[0], p[1], p[2]); n.connect(master); return n;
+    pos(n, p[0], p[1], p[2]); n.connect(bus || amb || master); return n;
   }
   function pinkBuffer() {
     const len = ctx.sampleRate * 4, b = ctx.createBuffer(1, len, ctx.sampleRate), d = b.getChannelData(0);
@@ -40,12 +41,12 @@ const AudioEngine = (function () {
   function init() {
     if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
     ctx = new (window.AudioContext || window.webkitAudioContext)();
-    master = gain(0.9); master.connect(ctx.destination);
+    master = gain(0.9); master.connect(ctx.destination); amb = gain(AMB_LEVEL); amb.connect(master);
     noiseBuf = pinkBuffer();
 
     // 1) Room tone (non-positional bed, very low)
     const rt = noiseSrc(), rtf = ctx.createBiquadFilter(); rtf.type = 'lowpass'; rtf.frequency.value = 500;
-    S.roomGain = gain(0.05); rt.connect(rtf).connect(S.roomGain).connect(master);
+    S.roomGain = gain(0.05); rt.connect(rtf).connect(S.roomGain).connect(amb);
 
     // 2) AC unit noise (positional)
     const ac = noiseSrc(), acf = ctx.createBiquadFilter(); acf.type = 'bandpass'; acf.frequency.value = 350; acf.Q.value = 0.7;
@@ -159,7 +160,7 @@ const AudioEngine = (function () {
       return new Promise(res => {
         if (ctx.state !== 'running') ctx.resume();
         const s = ctx.createBufferSource(); s.buffer = S.voiceBuf; const g = gain(p ? 2.2 : 1.5);
-        s.connect(g); g.connect(p ? panner(p, 3, 0.55) : master); s.onended = res; S.cur = s; s.start(0, off, dur);
+        s.connect(g); g.connect(p ? panner(p, 3, 0.55, master) : master); s.onended = res; S.cur = s; s.start(0, off, dur);
       });
     },
     stopVoice() { try { if (S.cur) S.cur.stop(); } catch (e) {} try { if (S.stopEl) S.stopEl(); } catch (e) {} },
@@ -176,6 +177,7 @@ const AudioEngine = (function () {
       });
     },
     fileErr: () => S.fileErr || '',
+    duck(on) { try { if (ctx && amb) { amb.gain.cancelScheduledValues(ctx.currentTime); amb.gain.setTargetAtTime(on ? AMB_DUCK : AMB_LEVEL, ctx.currentTime, on ? 0.12 : 0.5); } } catch (e) {} },
     isStarted: () => started
   };
   return api;
