@@ -140,16 +140,26 @@ const AudioEngine = (function () {
        Characters are spatialised at their position (HRTF); narrator and player lines are head-locked. */
     loadVoice(url) {
       return fetch(url).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error('http ' + r.status)))
-        .then(b => new Promise((res, rej) => ctx.decodeAudioData(b, res, rej))).then(buf => { S.voiceBuf = buf; return true; });
+        .then(b => new Promise((res, rej) => { const p = ctx.decodeAudioData(b, res, rej); if (p && p.catch) p.catch(rej); })).then(buf => { S.voiceBuf = buf; S.voiceMode = 'webaudio'; return 'webaudio'; })
+        .catch(e => {   // phones: if decoding fails, fall back to a plain <audio> element (seek + play)
+          S.decodeErr = String(e && e.message || e);
+          return new Promise((res, rej) => { const el = new Audio(); el.preload = 'auto'; el.src = url; el.oncanplaythrough = () => { S.voiceEl = el; S.voiceMode = 'htmlaudio'; res('htmlaudio'); }; el.onerror = () => rej(new Error('audio element failed: ' + S.decodeErr)); el.load(); setTimeout(() => { if (!S.voiceEl) rej(new Error('audio element timeout: ' + S.decodeErr)); }, 15000); });
+        });
     },
-    hasVoice: () => !!(S.voiceBuf && ctx),
+    resume() { try { if (ctx && ctx.state !== 'running') ctx.resume(); } catch (e) {} },
+    mode: () => S.voiceMode || 'none',
+    hasVoice: () => !!((S.voiceBuf && ctx) || S.voiceEl),
     playSprite(off, dur, p) {
+      if (!S.voiceBuf && S.voiceEl) {
+        return new Promise(res => { const el = S.voiceEl; el.volume = 1; try { el.currentTime = off; } catch (e) {} const pr = el.play(); if (pr && pr.catch) pr.catch(() => res()); S.stopEl = () => { el.pause(); res(); }; setTimeout(() => { el.pause(); res(); }, dur * 1000 + 100); });
+      }
       return new Promise(res => {
+        if (ctx.state !== 'running') ctx.resume();
         const s = ctx.createBufferSource(); s.buffer = S.voiceBuf; const g = gain(p ? 2.2 : 1.5);
         s.connect(g); g.connect(p ? panner(p, 3, 0.55) : master); s.onended = res; S.cur = s; s.start(0, off, dur);
       });
     },
-    stopVoice() { try { if (S.cur) S.cur.stop(); } catch (e) {} },
+    stopVoice() { try { if (S.cur) S.cur.stop(); } catch (e) {} try { if (S.stopEl) S.stopEl(); } catch (e) {} },
     isStarted: () => started
   };
   return api;
