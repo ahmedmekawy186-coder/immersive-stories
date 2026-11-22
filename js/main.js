@@ -11,6 +11,10 @@
     }
   });
 
+  function setStatus(t) { const el = document.getElementById('status'); if (el) el.textContent = t; }
+  window.addEventListener('error', e => setStatus('JS error: ' + (e.message || '') + ' @' + String(e.filename || '').split('/').pop() + ':' + e.lineno));
+  window.addEventListener('unhandledrejection', e => setStatus('JS error: ' + String(e.reason && e.reason.message || e.reason)));
+  ['touchend', 'click'].forEach(ev => document.addEventListener(ev, () => AudioEngine.resume(), { passive: true }));
   document.addEventListener('DOMContentLoaded', async () => {
     try { await Promise.all([document.fonts.load('700 40px Cairo'), document.fonts.load('400 40px Cairo')]); } catch (e) {}
     const scene = document.querySelector('a-scene');
@@ -29,8 +33,9 @@
       if (!v || v.length > 40) { err.textContent = 'اكتب رقم الجلسة (حتى 40 حرفًا).'; return; }
       Logger.start(v, CONFIG.level); AudioEngine.init();
       go.disabled = true; go.textContent = 'جارٍ تحميل الأصوات…';
-      const voice = CONFIG.fast ? Promise.resolve(false) : AudioEngine.loadVoice(CONFIG.voiceUrl).catch(e => { console.warn('voice load failed', e); return false; });
+      const voice = CONFIG.fast ? Promise.resolve(false) : AudioEngine.loadVoice(CONFIG.voiceUrl).catch(e => { window.__voiceErr = String(e && e.message || e); console.warn('voice load failed', e); return false; });
       voice.then(ok => {
+        setStatus(ok ? 'voice: ' + ok : 'voice: FAILED ' + (window.__voiceErr || ''));
         UI.hide('intro'); UI.show('hud'); if (!ok && !CONFIG.fast) UI.voiceNotice();
         document.getElementById('cam').setAttribute('look-controls', 'enabled', true);
         Story.begin();
