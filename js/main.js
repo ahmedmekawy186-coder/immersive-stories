@@ -11,6 +11,17 @@
     }
   });
 
+  /* keep the canvas affordable on phones in "desktop site" mode (huge canvas): start at pixel ratio <= 1.5, step down only if fps < 26 */
+  function startPerfGuard() {
+    const sc = document.querySelector('a-scene'); let ratio = Math.min(window.devicePixelRatio || 1, 1.5), frames = 0, t0 = performance.now(), lows = 0;
+    const apply = () => { try { sc.renderer.setPixelRatio(ratio); sc.resize(); } catch (e) {} }; apply();
+    (function loop() { frames++; requestAnimationFrame(loop); })();
+    setInterval(() => {
+      const now = performance.now(), fps = frames * 1000 / (now - t0); frames = 0; t0 = now; window.__fps = Math.round(fps); window.__ratio = ratio;
+      const st = document.getElementById('status'); if (st) st.dataset.perf = ' | fps ' + window.__fps + ' @x' + ratio.toFixed(2);
+      if (fps < 26 && ratio > 0.85) { if (++lows >= 2) { ratio = Math.max(0.85, ratio * 0.85); lows = 0; apply(); } } else lows = 0;
+    }, 2000);
+  }
   function setStatus(t) { const el = document.getElementById('status'); if (el) el.textContent = t; }
   window.addEventListener('error', e => setStatus('JS error: ' + (e.message || '') + ' @' + String(e.filename || '').split('/').pop() + ':' + e.lineno));
   window.addEventListener('unhandledrejection', e => setStatus('JS error: ' + String(e.reason && e.reason.message || e.reason)));
@@ -19,7 +30,7 @@
     try { await Promise.all([document.fonts.load('700 40px Cairo'), document.fonts.load('400 40px Cairo')]); } catch (e) {}
     const scene = document.querySelector('a-scene');
     const start = () => {
-      Classroom.build(scene);
+      Classroom.build(scene); Classroom.mergeStatic();
       Input.install(scene, CONFIG.level);
       window.addEventListener('hover-target', e => UI.hint(e.detail ? e.detail.label + '  (انقر أو اضغط E)' : ''));
       document.getElementById('level-badge').textContent = ({ desktop: 'المستوى المنخفض: شاشة + فأرة + لوحة مفاتيح', touch: 'المستوى المتوسط: شاشة لمس (قيد التطوير)', vr: 'المستوى المرتفع: نظارة VR (قيد التطوير)' })[CONFIG.level];
@@ -32,8 +43,10 @@
       const v = sid.value.trim();
       if (!v || v.length > 40) { err.textContent = 'اكتب رقم الجلسة (حتى 40 حرفًا).'; return; }
       Logger.start(v, CONFIG.level); AudioEngine.init();
+      startPerfGuard();
       go.disabled = true; go.textContent = 'جارٍ تحميل الأصوات…';
-      const voice = CONFIG.fast ? Promise.resolve(false) : AudioEngine.loadVoice(CONFIG.voiceUrl).catch(e => { window.__voiceErr = String(e && e.message || e); console.warn('voice load failed', e); return false; });
+      if (CONFIG.mobile) { AudioEngine.unlockEl(); AudioEngine.preload(CONFIG.PRELOAD); }
+      const voice = CONFIG.fast ? Promise.resolve(false) : CONFIG.mobile ? Promise.resolve('files') : AudioEngine.loadVoice(CONFIG.voiceUrl).catch(e => { window.__voiceErr = String(e && e.message || e); console.warn('voice load failed', e); return false; });
       voice.then(ok => {
         setStatus(ok ? 'voice: ' + ok : 'voice: FAILED ' + (window.__voiceErr || ''));
         UI.hide('intro'); UI.show('hud'); if (!ok && !CONFIG.fast) UI.voiceNotice();
