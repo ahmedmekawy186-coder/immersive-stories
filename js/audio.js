@@ -136,14 +136,20 @@ const AudioEngine = (function () {
     },
     footstep() { burst(null, 700, 0.09, 0.18, 'lowpass'); },
     click() { burst(null, 3000, 0.04, 0.12, 'bandpass'); },
-    /* Hook for real voice recordings (mp3/ogg in assets/audio/voice/), positioned in 3D.
-       Not used in v1: browser speechSynthesis cannot be spatialized. */
-    playVoice(url, p) {
-      if (!ctx) return;
-      fetch(url).then(r => r.ok ? r.arrayBuffer() : Promise.reject()).then(b => ctx.decodeAudioData(b)).then(buf => {
-        const s = ctx.createBufferSource(); s.buffer = buf; s.connect(panner(p, 1.5, 1)); s.start();
-      }).catch(() => {});
+    /* Recorded voices: one mp3 "sprite" with all lines, decoded once, played by offset.
+       Characters are spatialised at their position (HRTF); narrator and player lines are head-locked. */
+    loadVoice(url) {
+      return fetch(url).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error('http ' + r.status)))
+        .then(b => new Promise((res, rej) => ctx.decodeAudioData(b, res, rej))).then(buf => { S.voiceBuf = buf; return true; });
     },
+    hasVoice: () => !!(S.voiceBuf && ctx),
+    playSprite(off, dur, p) {
+      return new Promise(res => {
+        const s = ctx.createBufferSource(); s.buffer = S.voiceBuf; const g = gain(p ? 2.2 : 1.5);
+        s.connect(g); g.connect(p ? panner(p, 3, 0.55) : master); s.onended = res; S.cur = s; s.start(0, off, dur);
+      });
+    },
+    stopVoice() { try { if (S.cur) S.cur.stop(); } catch (e) {} },
     isStarted: () => started
   };
   return api;
