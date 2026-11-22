@@ -33,7 +33,8 @@ const UI = (function () {
       if (skipFn) skipFn();
       const est = Math.min(15000, 1500 + text.length * 75) * (fast() ? 0.06 : 1);
       const t0 = performance.now(); let done = false, tm = null;
-      const fin = () => { if (done) return; done = true; clearTimeout(tm); skipFn = null; res(); };
+      if (window.AudioEngine) AudioEngine.duck(true);
+      const fin = () => { if (done) return; done = true; if (window.AudioEngine) AudioEngine.duck(false); clearTimeout(tm); skipFn = null; res(); };
       if (window.CONFIG && CONFIG.mobile && o.id && CONFIG.FILES && CONFIG.FILES[o.id] && !muted && !fast() && AudioEngine.hasVoice()) {
         const dur = (CONFIG.VOICE[o.id] || [0, 4])[1] * 1000, ts = performance.now();
         skipFn = () => { AudioEngine.stopVoice(); fin(); };
