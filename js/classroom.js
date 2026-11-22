@@ -5,13 +5,23 @@ const Classroom = (function () {
   const state = { fixtures: [], pointLights: [], screens: [], fans: [], board: null, calTargets: {}, people: {} };
   const POS = { teacher: [-1.7, 0, -3.1], supervisor: [4.2, 0, 3.7], pc: [3.0, 0.9, -3.3], board: [0, 1.6, -4.4] };
 
+  const MOB = false;   // full quality on every device (phones included); optimisation is done by merging static geometry + adaptive pixel ratio
   function E(parent, tag, attrs) {
+    attrs = attrs || {};
+    if (tag === 'a-sphere') { attrs['segments-width'] = attrs['segments-width'] || 14; attrs['segments-height'] = attrs['segments-height'] || 10; }
+    if (tag === 'a-cylinder') attrs['segments-radial'] = attrs['segments-radial'] || 12;
+    if (tag === 'a-cone') attrs['segments-radial'] = attrs['segments-radial'] || 8;
     const el = document.createElement(tag);
     Object.keys(attrs || {}).forEach(k => el.setAttribute(k, attrs[k]));
     parent.appendChild(el); return el;
   }
   const P = a => a.join(' ');
   function box(parent, pos, size, color, extra) {
+    const el = boxEl(parent, pos, size, color, extra);
+    if (!extra && parent.id === 'classroom') el.setAttribute('data-merge', '1');
+    return el;
+  }
+  function boxEl(parent, pos, size, color, extra) {
     return E(parent, 'a-box', Object.assign({ position: P(pos), width: size[0], height: size[1], depth: size[2],
       material: 'color:' + color + '; roughness:0.85; metalness:0.05' }, extra || {}));
   }
@@ -157,10 +167,11 @@ const Classroom = (function () {
     });
 
     // windows on the right wall (x=5)
-    const winTex = windowCanvas();
+    const winCanvas = windowCanvas();
     [-2.6, 0.6, 3.6].forEach(z => {
       const w = E(root, 'a-plane', { position: P([4.97, 1.9, z]), rotation: '0 -90 0', width: 1.8, height: 1.3, material: 'shader:flat; side:double' });
-      applyCanvas(w, windowCanvas());
+      applyCanvas(w, winCanvas);
+      if (MOB) return;
       box(root, [4.95, 1.9, z], [0.05, 1.4, 0.06], '#9aa0a6'); box(root, [4.95, 1.9, z - 0.9], [0.05, 1.4, 0.06], '#9aa0a6'); box(root, [4.95, 1.9, z + 0.9], [0.05, 1.4, 0.06], '#9aa0a6');
       box(root, [4.95, 1.25, z], [0.05, 0.06, 1.86], '#9aa0a6'); box(root, [4.95, 2.55, z], [0.05, 0.06, 1.86], '#9aa0a6');
     });
@@ -183,12 +194,12 @@ const Classroom = (function () {
     [-3.0, 0, 3.0].forEach(x => [-2.5, 0.5, 3.5].forEach(z => {
       state.fixtures.push(box(root, [x, 3.15, z], [0.3, 0.06, 1.3], '#ffffff', { material: 'color:#ffffff; emissive:#fffbe8; emissiveIntensity:1.2' }));
     }));
-    [[-2.5, -2.0], [2.5, -2.0], [-2.5, 2.2], [2.5, 2.2]].forEach(p => {
+    (MOB ? [] : [[-2.5, -2.0], [2.5, -2.0], [-2.5, 2.2], [2.5, 2.2]]).forEach(p => {
       state.pointLights.push(E(root, 'a-entity', { position: P([p[0], 2.9, p[1]]), light: 'type:point; intensity:0.75; distance:10; decay:1.2; color:#fff6e0' }));
     });
     // ceiling fans
     [[-2.5, 0.5], [2.5, 0.5]].forEach(p => {
-      const f = E(root, 'a-entity', { position: P([p[0], 3.0, p[1]]), animation: 'property:rotation; to:0 360 0; dur:1800; loop:true; easing:linear' });
+      const f = E(root, 'a-entity', { position: P([p[0], 3.0, p[1]]), animation: MOB ? 'enabled:false' : 'property:rotation; to:0 360 0; dur:1800; loop:true; easing:linear' });
       E(f, 'a-cylinder', { radius: 0.05, height: 0.2, material: 'color:#444' });
       [0, 120, 240].forEach(a => { const b = E(f, 'a-entity', { rotation: '0 ' + a + ' 0' }); box(b, [0.5, -0.1, 0], [0.9, 0.02, 0.16], '#5b3d26'); });
       state.fans.push(f);
@@ -211,6 +222,7 @@ const Classroom = (function () {
         const scr = E(root, 'a-plane', { position: P([sx, 1.08, z - 0.055]), width: 0.5, height: 0.31, material: 'shader:flat' });
         scr.addEventListener('loaded', () => { const m = scr.getObject3D('mesh'); m.material.map = state.screenTex.on; m.material.color.set(0xffffff); m.material.needsUpdate = true; });
         state.screens.push(scr);
+        if (MOB) return;
         box(root, [sx, 0.775, z + 0.2], [0.42, 0.02, 0.14], '#2a2a2a'); box(root, [sx + 0.3, 0.775, z + 0.2], [0.06, 0.02, 0.1], '#2a2a2a');
         box(root, [sx - dx * 0.35 + (dx > 0 ? 0.55 : -0.55) * 0, 0.4, z - 0.2], [0.2, 0.4, 0.4], '#2d2d30');  // tower under desk
         // chair
@@ -267,6 +279,34 @@ const Classroom = (function () {
     Object.keys(state.calTargets).forEach(k => state.calTargets[k].hit.classList.remove('interactable'));
   }
 
+
+  /* Merge all static boxes into one mesh per material: ~250 draw calls -> ~15, identical look. */
+  function mergeStatic(done) {
+    const root = document.getElementById('classroom'), sc = document.querySelector('a-scene'); let tries = 0;
+    const iv = setInterval(() => {
+      const els = [...root.querySelectorAll('[data-merge]')];
+      if (!els.every(e => e.getObject3D('mesh')) && ++tries < 40) return;
+      clearInterval(iv);
+      try {
+        const before = sc.renderer.info.render.calls; sc.object3D.updateMatrixWorld(true);
+        const groups = {};
+        els.forEach(e => { const m = e.getObject3D('mesh'); if (!m) return; const g = m.geometry.clone(); g.applyMatrix4(m.matrixWorld);
+          const k = m.material.color.getHexString() + '|' + m.material.roughness + '|' + m.material.metalness; (groups[k] = groups[k] || { mat: m.material, geos: [] }).geos.push(g); });
+        Object.keys(groups).forEach(k => {
+          const G = groups[k]; let nv = 0, ni = 0; G.geos.forEach(g => { nv += g.attributes.position.count; ni += g.index.count; });
+          const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), uv = new Float32Array(nv * 2), idx = new Uint32Array(ni); let vo = 0, io = 0;
+          G.geos.forEach(g => { pos.set(g.attributes.position.array, vo * 3); nor.set(g.attributes.normal.array, vo * 3); uv.set(g.attributes.uv.array, vo * 2);
+            for (let i = 0; i < g.index.count; i++) idx[io + i] = g.index.array[i] + vo; vo += g.attributes.position.count; io += g.index.count; g.dispose(); });
+          const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); geo.setIndex(new THREE.BufferAttribute(idx, 1));
+          const mesh = new THREE.Mesh(geo, G.mat.clone()); mesh.frustumCulled = false; root.object3D.add(mesh);
+        });
+        els.forEach(e => e.parentNode && e.parentNode.removeChild(e));
+        console.log('merged static boxes:', els.length, 'entities into', Object.keys(groups).length, 'meshes');
+      } catch (err) { console.warn('merge skipped', err); }
+      if (done) done();
+    }, 150);
+  }
+
   function refreshRaycaster() {
     const sc = document.querySelector('a-scene'); if (sc.components.raycaster) sc.components.raycaster.refreshObjects();
   }
@@ -284,8 +324,8 @@ const Classroom = (function () {
   function setPower(on) {
     state.fixtures.forEach(f => f.setAttribute('material', 'color:#ffffff; emissive:' + (on ? '#fffbe8' : '#000000') + '; emissiveIntensity:' + (on ? 1.2 : 0)));
     state.pointLights.forEach(l => l.setAttribute('light', 'intensity', on ? 0.75 : 0));
-    const amb = document.getElementById('ambient'); if (amb) amb.setAttribute('light', 'intensity', on ? 0.45 : 0.16);
-    const hm = document.getElementById('hemi'); if (hm) hm.setAttribute('light', 'intensity', on ? 0.35 : 0.1);
+    const amb = document.getElementById('ambient'); if (amb) amb.setAttribute('light', 'intensity', on ? (MOB ? 0.95 : 0.45) : 0.16);
+    const hm = document.getElementById('hemi'); if (hm) hm.setAttribute('light', 'intensity', on ? (MOB ? 0.7 : 0.35) : 0.1);
     const sn = document.getElementById('sun'); if (sn) sn.setAttribute('light', 'intensity', on ? 0.4 : 0.18);
     state.fans.forEach(f => f.setAttribute('animation', 'enabled', on));
     state.screens.forEach(s => { const m = s.getObject3D('mesh'); if (m) { m.material.map = on ? state.screenTex.on : state.screenTex.off; m.material.needsUpdate = true; } });
@@ -312,6 +352,7 @@ const Classroom = (function () {
   AFRAME.registerComponent('person-anim', {
     schema: { mood: { default: 'idle' } },
     tick(t) {
+      if (MOB && t - (this.__last || 0) < 60) return; this.__last = t;
       const el = this.el, p = el.__parts; if (!p) return; const m = this.data.mood, s = t / 1000, ph = el.__phase || 0, sin = Math.sin;
       const [L, R] = p.arms, sit = p.seated, base = sit ? 1.1 : 0.05;   // +x swings the arm FORWARD (-z)
       const arm = (a, x, z) => { a.object3D.rotation.x = x; a.object3D.rotation.z = z || 0; };
@@ -333,5 +374,5 @@ const Classroom = (function () {
     }
   });
 
-  return { build, setPower, showCalibration, markTarget, setMood, talk, turn, worldPos, faceTeacherTo, Board, state, POS, refreshRaycaster };
+  return { build, mergeStatic, setPower, showCalibration, markTarget, setMood, talk, turn, worldPos, faceTeacherTo, Board, state, POS, refreshRaycaster };
 })();
