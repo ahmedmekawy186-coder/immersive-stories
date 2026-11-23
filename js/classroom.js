@@ -258,8 +258,9 @@ const Classroom = (function () {
     const spots = { tl: [-1.0, 2.1], tr: [1.0, 2.1], br: [1.0, 1.1], bl: [-1.0, 1.1] };
     Object.keys(spots).forEach(k => {
       const g = E(root, 'a-entity', { id: 'cal-' + k, position: P([spots[k][0], spots[k][1], -4.37]), visible: 'false' });
-      E(g, 'a-ring', { 'radius-inner': 0.05, 'radius-outer': 0.085, material: 'shader:flat; color:#7fe9ff; side:double' });
-      box(g, [0, 0, 0], [0.2, 0.012, 0.005], '#7fe9ff'); box(g, [0, 0, 0], [0.012, 0.2, 0.005], '#7fe9ff');
+      E(g, 'a-ring', { 'radius-inner': 0.12, 'radius-outer': 0.15, material: 'shader:flat; color:#7fe9ff; side:double' });
+      box(g, [0, 0, 0], [0.38, 0.018, 0.005], '#7fe9ff'); box(g, [0, 0, 0], [0.018, 0.38, 0.005], '#7fe9ff');
+      sign(g, String(['tl','tr','br','bl'].indexOf(k)+1), [0,-.28,.005],0,.18,.18,'#0c1f3d','#ffffff');
       const hit = E(g, 'a-circle', { radius: 0.26, position: '0 0 0.02', 'data-target': 'cal-' + k, 'data-label': 'نقطة معايرة', material: 'opacity:0; transparent:true; depthWrite:false' });
       state.calTargets[k] = { group: g, hit: hit, spot: spots[k] };
     });
@@ -291,7 +292,7 @@ const Classroom = (function () {
         const before = sc.renderer.info.render.calls; sc.object3D.updateMatrixWorld(true);
         const groups = {};
         els.forEach(e => { const m = e.getObject3D('mesh'); if (!m) return; const g = m.geometry.clone(); g.applyMatrix4(m.matrixWorld);
-          const k = m.material.color.getHexString() + '|' + m.material.roughness + '|' + m.material.metalness; (groups[k] = groups[k] || { mat: m.material, geos: [] }).geos.push(g); });
+          const k = m.material.color.getHexString() + '|' + m.material.roughness + '|' + m.material.metalness + '|' + (m.material.map ? m.material.map.uuid : ''); (groups[k] = groups[k] || { mat: m.material, geos: [] }).geos.push(g); });
         Object.keys(groups).forEach(k => {
           const G = groups[k]; let nv = 0, ni = 0; G.geos.forEach(g => { nv += g.attributes.position.count; ni += g.index.count; });
           const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), uv = new Float32Array(nv * 2), idx = new Uint32Array(ni); let vo = 0, io = 0;
