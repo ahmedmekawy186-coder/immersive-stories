@@ -74,7 +74,7 @@
  }
  AFRAME.registerComponent('v5-hands',{
   init(){this.hands=[hand(-1),hand(1)];this.hands.forEach(h=>this.el.object3D.add(h));this.tap=0;window.addEventListener('hand-target',e=>{this.tap=performance.now();this.target=Classroom.state.calTargets[e.detail].group.object3D;});window.addEventListener('pointerdown',()=>this.tap=performance.now());},
-  tick(t){this.hands.forEach((h,i)=>{h.visible=document.body.classList.contains('playing')&&!document.querySelector('a-scene').is('vr-mode');h.position.y=-.33+Math.sin(t*.0018+i)*.006;h.position.z=-.40-(i===1?Math.max(0,1-(performance.now()-this.tap)/450)*.12:0);});}
+  tick(t){this.hands.forEach((h,i)=>{h.visible=document.body.classList.contains('playing')&&!document.querySelector('a-scene').is('vr-mode');h.position.y=-.33+Math.sin(t*.0018+i)*.006;const k=Math.max(0,1-(performance.now()-this.tap)/650);h.position.z=-.40;h.position.x=(i===0?-1:1)*.22;if(i===1&&this.target&&k>0){const v=new T.Vector3();this.target.getWorldPosition(v);this.el.object3D.worldToLocal(v);h.position.lerp(v,Math.sin(k*Math.PI)*.78);}});}
  });
  window.addEventListener('load',()=>{const poll=setInterval(()=>{if(!Classroom.state.people.teacher)return;clearInterval(poll);softenRoom();replacePeople();document.querySelector('#cam').setAttribute('v5-hands','');},120);});
 })();
