@@ -145,14 +145,16 @@ const Story = (function () {
   function calibrationStart() {
     calSeq = []; calAttempt++;
     Classroom.Board.draw('settings', { done: 0 }); Classroom.showCalibration(true);
+    C.calibrationOrder.forEach(k=>Classroom.markTarget(k,'#38d99b')); Classroom.markTarget(C.calibrationOrder[0],'#ffb347');
     log('calibration_attempt_start', { attempt: calAttempt });
   }
   async function calibrationTap(key) {
     const expected = C.calibrationOrder[calSeq.length];
     if (key === expected) {
-      calSeq.push(key); Classroom.markTarget(key, '#35d07f'); AudioEngine.boardTap(true);
+      calSeq.push(key); Classroom.markTarget(key, '#35d07f'); window.dispatchEvent(new CustomEvent('hand-target',{detail:key})); AudioEngine.boardTap(true);
       log('calibration_point', { target: key, expected, correct: true, attempt: calAttempt, detail: 'position_' + calSeq.length });
       Classroom.Board.draw('settings', { done: calSeq.length });
+      if(calSeq.length<C.calibrationOrder.length) Classroom.markTarget(C.calibrationOrder[calSeq.length],'#ffb347');
       if (calSeq.length === C.calibrationOrder.length) {
         log('calibration_attempt_end', { attempt: calAttempt, correct: true });
         masteryRuns++;
@@ -191,7 +193,7 @@ const Story = (function () {
     }
     if (state === 'settings') {
       if (t === 'board') {
-        busy = true; await approach('board');
+        busy = true; await glide([0,-2.35],[0,-4.4],900); walkEnabled(false);
         log('interaction', { target: t, correct: true, expected: 'board', detail: 'open_settings_menu' });
         stepDone('open_settings'); AudioEngine.boardTap(true);
         UI.objective('المس نقاط المعايرة الأربع بالترتيب الصحيح');
