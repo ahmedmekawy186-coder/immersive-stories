@@ -11,7 +11,7 @@ const Story = (function () {
   const rigEl = () => document.getElementById('rig');
   const rig = () => rigEl().object3D.position;
   const dist = p => Math.hypot(rig().x - p[0], rig().z - p[2]);
-  function go(s) { state = s; log('state_enter'); const st = document.getElementById('status'); if (st) st.textContent = (st.textContent.split(' | ')[0] || '') + ' | state: ' + s + ' | audio: ' + (AudioEngine.mode ? AudioEngine.mode() : '') + (st.dataset.perf || ''); }
+  function go(s) { state = s; document.body.dataset.story=s; log('state_enter'); const st = document.getElementById('status'); if (st) st.textContent = (st.textContent.split(' | ')[0] || '') + ' | state: ' + s + ' | audio: ' + (AudioEngine.mode ? AudioEngine.mode() : '') + (st.dataset.perf || ''); }
   function stepStart(name) { log('step_start', { step: name }); }
   function stepDone(name) { log('step_complete', { step: name }); }
   function walkEnabled(v) { rigEl().setAttribute('wasd-controls', 'enabled', v); }
