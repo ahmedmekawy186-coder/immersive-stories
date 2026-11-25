@@ -9,3 +9,12 @@
 - Basis Universal transcoder bundled with Three.js, Apache License 2.0. https://github.com/BinomialLLC/basis_universal . Three.js integration: MIT.
 - Hands, room details, furniture detail geometry, signs and clock are original procedural geometry/canvas artwork.
 - Voice files retained from v4 until Gemini replacement is available. Not Gemini voices yet.
+
+## Visual revision 6 (characters)
+- Tevy Casual Walker (v5) is no longer used for people.
+
+## People (v6)
+- Character bodies, hair, eyebrows, eyes, clothes and shoes: MakeHuman system assets (CC0 1.0), https://static.makehumancommunity.org/assets/assetpacks/ . Characters were generated headless with the makehuman-mcp library and converted to glb with Blender. Shirt and suit colours were recoloured. Cast poses are set in code.
+- Quaternius Universal Base Characters (CC0) was evaluated and not used.
+
+- Motion-capture style animation clips (public domain / CC0 1.0), https://anim.gameasset.net/ : 7543 gestures with hands while explaining, 7387 types on laptop while sitting, 8842 clicks mouse absentmindedly, 8860 sits in an office chair relaxed, 8892 clicks mouse during virtual call. Retargeted to the MakeHuman rig in js/visuals-v5.js. Teacher beard painted on the face texture by kit/scripts/beard.py.
